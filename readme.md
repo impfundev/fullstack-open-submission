@@ -1,1 +1,1 @@
-# Full Stack Open Course par 0
+# Full Stack Open Course part 0
