@@ -5,14 +5,15 @@ const Header = (props) => {
   )
 }
 
+const Part = ({part, exercises}) => {
+  return (
+    <p>
+      {part} {exercises}
+    </p>
+  )
+}
+
 const Content = (props) => {
-  const Part = ({part, exercises}) => {
-    return (
-      <p>
-        {part} {exercises}
-      </p>
-    )
-  }
   console.log(props)
   return (
     <>
