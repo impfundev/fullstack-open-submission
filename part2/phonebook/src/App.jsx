@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import personService from "./services/persons";
 
 const Filter = ({ handler }) => {
   return (
@@ -37,7 +37,15 @@ const PersonForm = ({
   );
 };
 
-const Persons = ({ persons, filter }) => {
+const Persons = ({ persons, filter, setPersons }) => {
+  const confirmDelete = (person) => {
+    if (confirm(`Delete ${person.name}?`)) {
+      personService.remove(person.id).then(() => {
+        const returnedPerson = persons.filter((p) => p.id !== person.id);
+        setPersons(returnedPerson);
+      });
+    }
+  };
   return (
     <>
       <ul>
@@ -48,6 +56,7 @@ const Persons = ({ persons, filter }) => {
           .map((person) => (
             <li key={person.id}>
               {person.name} {person.number}
+              <button onClick={() => confirmDelete(person)}>delete</button>
             </li>
           ))}
       </ul>
@@ -60,12 +69,30 @@ const App = () => {
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
   const [filterText, setFilterText] = useState("");
+  let personObject;
+  const personId =
+    parseInt(persons.map((p) => p.id).slice(persons.length - 1)) + 1;
+  if (personId) {
+    personObject = {
+      name: newName,
+      number: newNumber,
+      important: Math.random() > 0.5,
+      id: personId.toString(),
+    };
+  } else {
+    personObject = {
+      name: newName,
+      number: newNumber,
+      important: Math.random() > 0.5,
+      id: JSON.stringify(persons.length + 1),
+    };
+  }
 
   useEffect(() => {
     console.log("effect");
-    axios.get("http://localhost:3001/persons").then((response) => {
+    personService.getAll().then((initialPersons) => {
       console.log("promise fulfilled");
-      setPersons(response.data);
+      setPersons(initialPersons);
     });
   }, []);
   console.log("render", persons.length, "persons");
@@ -74,8 +101,26 @@ const App = () => {
     event.preventDefault();
 
     if (persons.some((person) => person.name === newName)) {
-      alert(`${newName} is already added to phonebook`);
-      return false;
+      if (
+        confirm(
+          `${newName} is already added to phonebook, replace the old number with a new one?`
+        )
+      ) {
+        const existingPerson = {
+          ...persons.find((p) => p.name === newName),
+          number: newNumber,
+        };
+        personService
+          .update(existingPerson.id, existingPerson)
+          .then((returnedPerson) => {
+            setPersons(
+              persons.map((p) =>
+                p.id !== existingPerson.id ? p : returnedPerson
+              )
+            );
+          });
+        return;
+      }
     } else if (newName.length === 0) {
       alert("name cannot be empty");
       return false;
@@ -83,16 +128,15 @@ const App = () => {
       alert("number cannot be empty");
       return false;
     } else {
-      const personObject = {
-        name: newName,
-        number: newNumber,
-        important: Math.random() > 0.5,
-        id: persons.length + 1,
-      };
-      setPersons(persons.concat(personObject));
-      setNewName("");
+      personService.create(personObject).then((returnedPerson) => {
+        setPersons(persons.concat(returnedPerson));
+        setNewName("");
+      });
+      console.log("New Number has been added", persons);
     }
   };
+
+  const updatePerson = (id) => {};
 
   const handleNameChange = (event) => {
     setNewName(event.target.value);
@@ -124,7 +168,7 @@ const App = () => {
 
       <h3>Numbers</h3>
 
-      <Persons persons={persons} filter={filterText} />
+      <Persons persons={persons} filter={filterText} setPersons={setPersons} />
     </div>
   );
 };
